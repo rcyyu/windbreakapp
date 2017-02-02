@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  
+  <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no">
+  <title>Mapping and Information Tool for Tree Planting</title>
+  
+  <link rel="stylesheet" href="https://js.arcgis.com/3.18/esri/css/esri.css">
+  <style>
+    html, body, #mapDiv {
+      height: 100%;
+      margin: 0; 
+      padding: 0;
+      width: 100%;
+    }
+    #header{
+      background-color: #fff;
+      width: 100%;
+    }
+
+    #info {
+      bottom: 20px;
+      color: #444;
+      height: auto;
+      font-family: arial;
+      left: 20px;
+      margin: 5px;
+      padding: 10px;
+      position: absolute;
+      text-align: left;
+      width: 300px;
+      z-index: 40;
+    }
+    .label {
+      display: inline-block;
+      width: 4em;
+    }
+
+          #search {
+         display: block;
+         position: absolute;
+         z-index: 2;
+         top: 100px;
+         left: 74px;
+      }
+  </style>
+
+  <script src="https://js.arcgis.com/3.18/"></script>
+  <script>
+    require(["dojo/dom",
+          "dojo/_base/lang",
+          "dojo/json", 
+          "esri/config",
+          "esri/map",
+          "esri/dijit/Search",
+          "esri/graphic",
+          "esri/geometry/Geometry",
+          "esri/geometry/Extent",
+          "esri/SpatialReference",
+          "esri/tasks/GeometryService",
+          "esri/tasks/AreasAndLengthsParameters",
+          "esri/toolbars/draw",
+          "esri/symbols/SimpleFillSymbol",
+          "dojo/domReady!"],
+    function(dom, lang, json, esriConfig, Map, Search, Graphic, 
+      Geometry, Extent, SpatialReference, GeometryService, 
+      AreasAndLengthsParameters, Draw, SimpleFillSymbol){
+
+      // Add streets basemap
+      var map = new Map("mapDiv", {
+        basemap: "streets", //Basemap type can be changed here.
+        center: [-80.39 , 43.40],
+        zoom: 14
+      });
+      
+      /* This function is used to allow the user to draw their own polygon.
+         The polygon is created using straight lines (not a freehand polygon)
+         Instructions prompt the user how to draw polygon on the application */
+
+      map.on("load", function() {
+        var tb = new Draw(map);
+        tb.on("draw-end", lang.hitch(map, getAreaAndLength));
+        tb.activate(Draw.POLYGON);
+      });
+
+      /* This function allows the user to search for an address. The application
+         will redirect the user to the location that was put into the search bar*/
+      var search = new Search({
+            map: map
+         }, "search");
+         search.startup();
+
+      /* This function calls on the geometry service - "GeometryService" which will
+         calculate the area and length of the polygon once the drawing is complete*/
+      
+      var geometryService = new GeometryService("https://sampleserver6.arcgisonline.com/arcgis/rest/services/Utilities/Geometry/GeometryServer");
+      geometryService.on("areas-and-lengths-complete", outputAreaAndLength);
+
+    function getAreaAndLength(evtObj) {
+      var map = this,
+          geometry = evtObj.geometry;
+      map.graphics.clear();
+      
+      // This variable is assigned to the polygon which is drawn by the user
+      var graphic = map.graphics.add(new Graphic(geometry, new SimpleFillSymbol()));
+      
+      //setup the parameters for the areas and lengths operation
+      var areasAndLengthParams = new AreasAndLengthsParameters();
+      areasAndLengthParams.lengthUnit = GeometryService.UNIT_FOOT; // length is calculated in feet
+      areasAndLengthParams.areaUnit = GeometryService.UNIT_SQUARE_FEET; // area is calculated in square feet
+      areasAndLengthParams.calculationType = "geodesic";
+      geometryService.simplify([geometry], function(simplifiedGeometries) {
+        areasAndLengthParams.polygons = simplifiedGeometries;
+        geometryService.areasAndLengths(areasAndLengthParams);
+      });
+    }
+
+    /* This function outputs the area and length information which is calculated
+       by the geometry service. Note: Width is NOT calculated by the geometry
+       service and therefore must be calculated manually using the area formula
+       width = area/length */
+
+    function outputAreaAndLength(evtObj) {
+      var result = evtObj.result;
+      console.log(json.stringify(result));
+      var polyArea = result.areas[0].toFixed(3); // Calculates area in square feet
+      dom.byId("area").innerHTML = polyArea;
+      var polyLength = result.lengths[0].toFixed(3) ; // calculates length in feet
+      dom.byId("length").innerHTML = polyLength;
+      var polyWidth = (result.areas[0].toFixed(3) )/ (result.lengths[0].toFixed(3)); // calculates width in feet
+      dom.byId("pwidth").innerHTML = polyWidth.toFixed(3) ;
+
+      // This is for the White Cedar plant only. Other options need to be given.
+      // This can be done using a dropdown which lists all the plants that can be used
+      // I have left this here so you can see how its calculated and how its output to the user
+      // White Cedar Information
+      var WhiteCedarRows = polyWidth / 9;
+      dom.byId("wcedarRow").innerHTML = WhiteCedarRows.toFixed(0) +" rows";
+      var WhiteCedarPlants = polyLength / 6;
+      dom.byId("wcedarLength").innerHTML = WhiteCedarPlants.toFixed(0) +" per row";
+      var WhiteCedarTotal = WhiteCedarRows * WhiteCedarPlants;
+      dom.byId("wcedartotal").innerHTML = WhiteCedarTotal.toFixed(0) +" plants";
+      var WhiteCedarCost = WhiteCedarTotal * 0.85;
+      dom.byId("wcedarCost").innerHTML = "$" + WhiteCedarCost.toFixed(2);
+       
+    }
+  });
+
+  
+  </script>
+
+  </head>
+  <body>
+    <div id="header">
+      Draw a polygon around the area of interest. Select required parameters below
+      <br><br>
+      <label for="Objective"> Set Objective: </label>
+      <input type="checkbox" name="objective" value="Windbreak"> Windbreak
+			<input type="checkbox" name="objective" value="VisualBarrier"> Visual Barrier
+			<input type="checkbox" name="objective" value="SoundBarrier"> Sound Barrier
+      <input type="checkbox" name="objective" value="PollinatorHabitat"> Pollinator Habitat
+			<input type="checkbox" name="objective" value="SoilErosion"> Soil Erosion
+			<input type="checkbox" name="objective" value="Shade"> Provide Shade<br><br>
+    </div>
+    <div id="search"></div>
+    <div id="mapDiv"></div>
+    <div id="info" class="esriSimpleSlider">
+      Polygon Information: <br>
+      <span class="label">Area: <span id="area"></span> sq ft </span>
+      <br>
+      <span class="label">Length: <span id="length"></span> feet </span>
+      <br>
+      <span class ="label">Width: <span id="pwidth"></span> feet </span>
+      <br>
+      ================================= <br><br>
+      <B>White Cedar - $0.85/plant</b><br>
+      <span class="label"># rows:</span> <span id="wcedarRow"></span>
+      <br>
+      <span class="label">Plants per row:</span> <span id="wcedarLength"></span>
+      <br>
+      <span class ="label">Total plants:</span> <span id="wcedartotal"></span>
+      <br>
+      <span class ="label">Total cost:</span> <span id="wcedarCost"></span>
+      <br>
+    </div>
+  </body>
+</html>
