@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+        <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no">
+        <title>Mapping and Information Tool for Tree Planting</title>
+        <link rel="stylesheet" href="http://www.w3schools.com/lib/w3.css">
+        <link rel="stylesheet" href="https://js.arcgis.com/3.19/esri/css/esri.css">
+        <link rel="stylesheet" type="text/css" href="main.css">
+
+        <script src="https://js.arcgis.com/3.19/"></script>
+        <script src="scripts.js"></script>
+
+    </head>
+    <body>
+        <div id="header">
+            Draw a polygon around the area of interest. Select required parameters below
+            <br>
+            <label for="Objective"> Set Objective: </label>
+            <input type="checkbox" name="objective" value="Windbreak"> Windbreak
+            <input type="checkbox" name="objective" value="VisualBarrier"> Visual Barrier
+            <input type="checkbox" name="objective" value="SoundBarrier"> Sound Barrier
+            <input type="checkbox" name="objective" value="PollinatorHabitat"> Pollinator Habitat
+            <input type="checkbox" name="objective" value="SoilErosion"> Soil Erosion
+            <input type="checkbox" name="objective" value="Shade"> Provide Shade<br>
+        </div>
+        <div id="search"></div>
+        <div id="mapDiv"></div>
+        <div id="info" class="esriSimpleSlider">
+            Polygon Information: <br>
+            <span class="label">Area: <span id="area"></span> sq ft </span>
+            <br>
+            <span class="label">Length: <span id="length"></span> feet </span>
+            <br>
+            <span class ="label">Width: <span id="pwidth"></span> feet </span>
+            <br>
+            ================================= <br><br>
+            <b>White Cedar - $0.85/plant</b><br>
+            <span class="label"># rows:</span> <span id="wcedarRow"></span>
+            <br>
+            <span class="label">Plants per row:</span> <span id="wcedarLength"></span>
+            <br>
+            <span class ="label">Total plants:</span> <span id="wcedartotal"></span>
+            <br>
+            <span class ="label">Total cost:</span> <span id="wcedarCost"></span>
+            <br>
+        </div>
+    </body>
+</html>
