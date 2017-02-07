@@ -94,7 +94,8 @@ require(["dojo/dom",
 		soilQuery.spatialRelationship = Query.SPATIAL_REL_INTERSECTS;
 		soilQuery.geometry = graphic.geometry;
 			// 'featureSelection' is the variable representing the selection operation
-		var featureSelection = featureLayer.selectFeatures(soilQuery, FeatureLayer.SELECTION_NEW);
+		featureLayer.selectFeatures(soilQuery, FeatureLayer.SELECTION_NEW);
+		var featureSelection =  featureLayer.getSelectedFeatures();
 		
 		// Use this to make unselected soil features invisible
 		/*
