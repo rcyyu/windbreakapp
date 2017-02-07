@@ -1,3 +1,8 @@
+// This html file contains the intersect functionality for the Windbreak Application
+// Ajahnis Charley
+// 02/07/2017
+// OMAFRA
+
 
 /*jshint node:true */
 require(["dojo/dom",
@@ -12,11 +17,20 @@ require(["dojo/dom",
          "esri/SpatialReference",
          "esri/tasks/GeometryService",
          "esri/tasks/AreasAndLengthsParameters",
+		 "esri/tasks/QueryTask",
+		 "esri/tasks/query",
          "esri/toolbars/draw",
          "esri/symbols/SimpleFillSymbol",
          "esri/layers/FeatureLayer",
+		 "esri/geometry/geometryEngine",
+		 "esri/symbols/SimpleMarkerSymbol",
+		 "esri/renderers/SimpleRenderer",
+		 "esri/symbols/SimpleLineSymbol",
+		 "esri/Color",
          "dojo/domReady!"],
-        function(dom, lang, json, esriConfig, Map, Search, Graphic, Geometry, Extent, SpatialReference, GeometryService, AreasAndLengthsParameters, Draw, SimpleFillSymbol, FeatureLayer){
+        function(dom, lang, json, esriConfig, Map, Search, Graphic, Geometry, Extent,
+			SpatialReference, GeometryService, AreasAndLengthsParameters, QueryTask, Query, Draw, SimpleFillSymbol, FeatureLayer, geometryEngine, SimpleMarkerSymbol, SimpleRenderer,
+			SimpleLineSymbol, Color){
 
     // Add streets basemap
     var map = new Map("mapDiv", {
@@ -34,10 +48,13 @@ require(["dojo/dom",
         tb.on("draw-end", lang.hitch(map, getAreaAndLength));
         tb.activate(Draw.POLYGON);
     });
-    var featureLayer = new FeatureLayer("https://ws.gisdynamic.lrc.gov.on.ca/public/rest/services/LIO_PUBLIC_DATA_SERVICES/geological_and_geophysical/MapServer/4");
-
-    map.addLayer(featureLayer);
-
+	
+	// Add the feature layers containing relevant data {e.g. soils, climate zones}, and specifies the specific desired fields
+    var featureLayer = new FeatureLayer("https://ws.gisdynamic.lrc.gov.on.ca/public/rest/services/LIO_PUBLIC_DATA_SERVICES/geological_and_geophysical/MapServer/4", {
+		outFields :["SOIL_NAME1", "SOIL_NAME2", "SOIL_NAME3", "DRAINAGE1", "DRAINAGE2", "DRAINAGE3"]
+	});
+	map.addLayer(featureLayer);
+	
     /* This function allows the user to search for an address. The application
          will redirect the user to the location that was put into the search bar*/
     var search = new Search({
@@ -50,15 +67,41 @@ require(["dojo/dom",
 
     var geometryService = new GeometryService("https://sampleserver6.arcgisonline.com/arcgis/rest/services/Utilities/Geometry/GeometryServer");
     geometryService.on("areas-and-lengths-complete", outputAreaAndLength);
-
+	
     function getAreaAndLength(evtObj) {
         var map = this,
             geometry = evtObj.geometry;
         map.graphics.clear();
-
-        // This variable is assigned to the polygon which is drawn by the user
+		
+			// selection symbol used to visualize underlying soil intersect area
+		var sfs = new SimpleFillSymbol(SimpleFillSymbol.STYLE_SOLID,
+			new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID,
+			new Color([255,0,0]), 2),new Color([255,255,0,0.25])
+		);
+		featureLayer.setSelectionSymbol(sfs); 
+		
+		// Intersects the user-drawn graphic with the soil feature layer
+		// Feel free to rename these variable as you see fit, these names are temporary and are for testing purposes
+		
+			// 'piece_geom' is the geometry object of the user-drawn graphic
+		var piece_geom = evtObj.geometry;
+			// 'graphic' is a variable assigned to the polygon which is drawn by the user
         var graphic = map.graphics.add(new Graphic(geometry, new SimpleFillSymbol()));
-
+		
+			// 'soilQuery' is the variable that will be used to select the underlying soil layer
+		var soilQuery = new Query();
+			// These are properties of the query that are established to operate the intersect
+		soilQuery.spatialRelationship = Query.SPATIAL_REL_INTERSECTS;
+		soilQuery.geometry = graphic.geometry;
+			// 'featureSelection' is the variable representing the selection operation
+		var featureSelection = featureLayer.selectFeatures(soilQuery, FeatureLayer.SELECTION_NEW);
+		
+		// Use this to make unselected soil features invisible
+		/*
+        var nullSymbol = new SimpleMarkerSymbol().setSize(0);
+        featureLayer.setRenderer(new SimpleRenderer(nullSymbol));
+		*/
+		
         //setup the parameters for the areas and lengths operation
         var areasAndLengthParams = new AreasAndLengthsParameters();
         areasAndLengthParams.lengthUnit = GeometryService.UNIT_FOOT; // length is calculated in feet
@@ -74,7 +117,6 @@ require(["dojo/dom",
        by the geometry service. Note: Width is NOT calculated by the geometry
        service and therefore must be calculated manually using the area formula
        width = area/length */
-
 
     function outputAreaAndLength(evtObj) {
         var result = evtObj.result;
