@@ -27,10 +27,16 @@ require(["dojo/dom",
 		 "esri/renderers/SimpleRenderer",
 		 "esri/symbols/SimpleLineSymbol",
 		 "esri/Color",
+		 "esri/layers/Field",
+		 "esri/tasks/FeatureSet",
+		 "esri/request",
+		 "dojo/on",
+		 "dojo/_base/array",
+		 "esri/InfoTemplate",
          "dojo/domReady!"],
         function(dom, lang, json, esriConfig, Map, Search, Graphic, Geometry, Extent,
 			SpatialReference, GeometryService, AreasAndLengthsParameters, QueryTask, Query, Draw, SimpleFillSymbol, FeatureLayer, geometryEngine, SimpleMarkerSymbol, SimpleRenderer,
-			SimpleLineSymbol, Color){
+			SimpleLineSymbol, Color, Field, FeatureSet, esriRequest, on, arrayUtil, InfoTemplate){
 
     // Add streets basemap
     var map = new Map("mapDiv", {
@@ -38,7 +44,10 @@ require(["dojo/dom",
         center: [-80.39 , 43.40],
         zoom: 14
     });
-
+	
+	// The REST service URL is used quite a bit, so it is replaced here by the variable 'soilURL'
+	var soilURL = "https://ws.gisdynamic.lrc.gov.on.ca/public/rest/services/LIO_PUBLIC_DATA_SERVICES/geological_and_geophysical/MapServer/4"
+	
     /* This function is used to allow the user to draw their own polygon.
          The polygon is created using straight lines (not a freehand polygon)
          Instructions prompt the user how to draw polygon on the application */
@@ -50,8 +59,9 @@ require(["dojo/dom",
     });
 	
 	// Add the feature layers containing relevant data {e.g. soils, climate zones}, and specifies the specific desired fields
-    var featureLayer = new FeatureLayer("https://ws.gisdynamic.lrc.gov.on.ca/public/rest/services/LIO_PUBLIC_DATA_SERVICES/geological_and_geophysical/MapServer/4", {
-		outFields :["SOIL_NAME1", "SOIL_NAME2", "SOIL_NAME3", "DRAINAGE1", "DRAINAGE2", "DRAINAGE3"]
+    var featureLayer = new FeatureLayer(soilURL, {
+		mode: FeatureLayer.MODE_ONDEMAND,
+		outFields: ["SHAPE", "OBJECTID", "SOIL_NAME1", "SOIL_NAME2", "SOIL_NAME3", "DRAINAGE1", "DRAINAGE2", "DRAINAGE3"]
 	});
 	map.addLayer(featureLayer);
 	
@@ -80,28 +90,24 @@ require(["dojo/dom",
 		);
 		featureLayer.setSelectionSymbol(sfs); 
 		
-		// Intersects the user-drawn graphic with the soil feature layer
-		// Feel free to rename these variable as you see fit, these names are temporary and are for testing purposes
-		
-			// 'piece_geom' is the geometry object of the user-drawn graphic
-		var piece_geom = evtObj.geometry;
-			// 'graphic' is a variable assigned to the polygon which is drawn by the user
+		// Intersects the user-drawn graphic with the soil feature layer and runs a data processing function after.
+		//   Feel free to rename these variable as you see fit, these names are temporary and are for testing purposes.
+
+			// 'graphic' is a variable assigned to the polygon which is drawn by the user.
         var graphic = map.graphics.add(new Graphic(geometry, new SimpleFillSymbol()));
 		
-			// 'soilQuery' is the variable that will be used to select the underlying soil layer
+			// 'soilQuery' is the variable that will be used to select the underlying soil layer.
 		var soilQuery = new Query();
-			// These are properties of the query that are established to operate the intersect
+		
+			// These are properties of the query that are established to operate the intersect.
 		soilQuery.spatialRelationship = Query.SPATIAL_REL_INTERSECTS;
 		soilQuery.geometry = graphic.geometry;
-			// 'featureSelection' is the variable representing the selection operation
-		featureLayer.selectFeatures(soilQuery, FeatureLayer.SELECTION_NEW);
-		var featureSelection =  featureLayer.getSelectedFeatures();
+		soilQuery.outFields = ["SHAPE", "OBJECTID", "SOIL_NAME1", "SOIL_NAME2", "SOIL_NAME3", "DRAINAGE1", "DRAINAGE2", "DRAINAGE3"];
 		
-		// Use this to make unselected soil features invisible
-		/*
-        var nullSymbol = new SimpleMarkerSymbol().setSize(0);
-        featureLayer.setRenderer(new SimpleRenderer(nullSymbol));
-		*/
+			// 'fs' is the variable representing the selection operation and 'fsComplete' runs
+			//   the function 'useData' when the selection completes.
+		var fsComplete = featureLayer.on("selection-complete", useData)
+		var fs = featureLayer.selectFeatures(soilQuery, FeatureLayer.SELECTION_NEW);
 		
         //setup the parameters for the areas and lengths operation
         var areasAndLengthParams = new AreasAndLengthsParameters();
@@ -113,12 +119,32 @@ require(["dojo/dom",
             geometryService.areasAndLengths(areasAndLengthParams);
         });
     }
-
+	   
+	// 'useData' is a function that utilizes the data from the feature selection containing the layers
+	//   intersecting with the user-drawn graphic
+	function useData (event) {
+		// 'soilFeatures' is an array consisting of arrays that hold the object id, soil names, and drainages of each selected feature.
+	  var soilFeatures = [];
+		// This thing is a for loop that cycles through the selected features.
+	  arrayUtil.forEach(event.features, function (feature) {
+		// 'currentSoilFeature' is the array that holds the information for each individual feature.
+		var currentSoilFeature = []
+		// This code block adds relevant data to the soil feature.
+		currentSoilFeature += feature.attributes.OBJECTID;
+		currentSoilFeature += feature.attributes.SOIL_NAME1;
+		currentSoilFeature += feature.attributes.DRAINAGE1;
+		// Adds the soil feature the the overall list.
+		soilFeatures += currentSoilFeature;
+		// Console output for testing. Remove at will.
+		console.log("Soil feature: " + feature.attributes.OBJECTID);
+	  });
+	}
+	 
     /* This function outputs the area and length information which is calculated
        by the geometry service. Note: Width is NOT calculated by the geometry
        service and therefore must be calculated manually using the area formula
        width = area/length */
-
+	 
     function outputAreaAndLength(evtObj) {
         var result = evtObj.result;
         console.log(json.stringify(result));
@@ -141,6 +167,13 @@ require(["dojo/dom",
         dom.byId("wcedartotal").innerHTML = WhiteCedarTotal.toFixed(0) +" plants";
         var WhiteCedarCost = WhiteCedarTotal * 0.85;
         dom.byId("wcedarCost").innerHTML = "$" + WhiteCedarCost.toFixed(2);
-
     }
+	
+	// This function will remove event listeners with the application closes to prevent memory leaks
+	var myUnload = map.on("unload", unloadHandler);
+	
+	function unloadHandler(evt){
+		fsComplete.remove();
+		myUnload.remove();
+	}
 });
