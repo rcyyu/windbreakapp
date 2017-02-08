@@ -1,0 +1,6 @@
+species,soil,spacingwidthft,spacinglengthft,cost,windbreak,visualbarrier,pollinator,erosioncontrol,soundbarrier,shade
+white cedar,sands to clays,6,9,0.85,FALSE,TRUE,TRUE,FALSE,TRUE,TRUE
+white spruce,sands to clays,8,8,0.5,TRUE,FALSE,FALSE,FALSE,FALSE,TRUE
+norway spruce,sands to clays,8,9,0.6,FALSE,TRUE,TRUE,TRUE,TRUE,TRUE
+hardwoods,varied depending on species.,8,9,0.28,TRUE,TRUE,FALSE,TRUE,TRUE,TRUE
+shrubs,varied depending on species.,6,9,0.9,TRUE,TRUE,TRUE,TRUE,FALSE,TRUE
