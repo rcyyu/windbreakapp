@@ -17,7 +17,6 @@ require(["dojo/dom",
          "esri/SpatialReference",
          "esri/tasks/GeometryService",
          "esri/tasks/AreasAndLengthsParameters",
-		 "esri/tasks/QueryTask",
 		 "esri/tasks/query",
          "esri/toolbars/draw",
          "esri/symbols/SimpleFillSymbol",
@@ -27,16 +26,13 @@ require(["dojo/dom",
 		 "esri/renderers/SimpleRenderer",
 		 "esri/symbols/SimpleLineSymbol",
 		 "esri/Color",
-		 "esri/layers/Field",
 		 "esri/tasks/FeatureSet",
-		 "esri/request",
 		 "dojo/on",
 		 "dojo/_base/array",
-		 "esri/InfoTemplate",
          "dojo/domReady!"],
         function(dom, lang, json, esriConfig, Map, Search, Graphic, Geometry, Extent,
-			SpatialReference, GeometryService, AreasAndLengthsParameters, QueryTask, Query, Draw, SimpleFillSymbol, FeatureLayer, geometryEngine, SimpleMarkerSymbol, SimpleRenderer,
-			SimpleLineSymbol, Color, Field, FeatureSet, esriRequest, on, arrayUtil, InfoTemplate){
+			SpatialReference, GeometryService, AreasAndLengthsParameters, Query, Draw, SimpleFillSymbol, FeatureLayer, geometryEngine, SimpleMarkerSymbol, SimpleRenderer,
+			SimpleLineSymbol, Color, FeatureSet, on, arrayUtil){
 
     // Add streets basemap
     var map = new Map("mapDiv", {
