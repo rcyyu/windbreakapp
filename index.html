@@ -11,7 +11,6 @@
         <script src="d3.js"></script>
         <script src="https://js.arcgis.com/3.19/"></script>
         <script src="scripts.js"></script>
-
     </head>
     <body>
         <div id="header">
@@ -36,7 +35,7 @@
             <br>
             <span class ="label">Width: <span id="pwidth"></span> feet </span>
             <br>
-            ================================= <br><br>
+            =============================== <br><br>
             <b>White Cedar - $0.85/plant</b><br>
             <span class="label"># rows:</span> <span id="wcedarRow"></span>
             <br>
@@ -46,6 +45,28 @@
             <br>
             <span class="label">Total cost:</span> <span id="wcedarCost"></span>
             <br>
+			<span class ="label">Primary Drainage Types: <span id="drainage">
+            <br>
         </div>
+		<div id="rightPane"
+           data-dojo-type="dijit/layout/ContentPane"
+           data-dojo-props="region:'right'">
+
+        <div id="printButton"></div>
+        <hr />
+        
+        <div id="drawingWrapper">
+          Add some graphics:
+          <div id="point" class="drawing">Point</div>
+          <div id="freehandpolyline" class="drawing">Freehand Polyline</div>
+          <div id="freehandpolygon" class="drawing">Freehand Polygon</div>
+          <div id="circle" class="drawing">Circle</div>
+        </div>
+        <hr />
+        <div id="layerToggle">
+          Toggle Layers: <br />
+          
+        </div>
+      </div>
     </body>
 </html>

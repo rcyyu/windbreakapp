@@ -78,13 +78,13 @@ require(["dojo/dom",
         var map = this,
             geometry = evtObj.geometry;
         map.graphics.clear();
-		
+
 			// selection symbol used to visualize underlying soil intersect area
 		var sfs = new SimpleFillSymbol(SimpleFillSymbol.STYLE_SOLID,
 			new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID,
 			new Color([255,0,0]), 2),new Color([255,255,0,0.25])
 		);
-		featureLayer.setSelectionSymbol(sfs); 
+		featureLayer.setSelectionSymbol(sfs);
 		
 		// Intersects the user-drawn graphic with the soil feature layer and runs a data processing function after.
 		//   Feel free to rename these variable as you see fit, these names are temporary and are for testing purposes.
@@ -119,8 +119,12 @@ require(["dojo/dom",
 	// 'useData' is a function that utilizes the data from the feature selection containing the layers
 	//   intersecting with the user-drawn graphic
 	function useData (event) {
+	if (event.features.length < 10) {
 		// 'soilFeatures' is an array consisting of arrays that hold the object id, soil names, and drainages of each selected feature.
 	  var soilFeatures = [];
+		// 'justDrains' stores the DRAINAGE1 variable of each feature in the user's selection
+	  var justDrains = [];
+	  
 		// This thing is a for loop that cycles through the selected features.
 	  arrayUtil.forEach(event.features, function (feature) {
 		// 'currentSoilFeature' is the array that holds the information for each individual feature.
@@ -129,11 +133,53 @@ require(["dojo/dom",
 		currentSoilFeature += feature.attributes.OBJECTID;
 		currentSoilFeature += feature.attributes.SOIL_NAME1;
 		currentSoilFeature += feature.attributes.DRAINAGE1;
+		
+		// Stores all the relevant DRAINAGE1 values, whilst preventing duplicates
+		if (!(justDrains.includes(drainageValues(feature.attributes.DRAINAGE1)))) {
+			justDrains.push(drainageValues(feature.attributes.DRAINAGE1));
+		}
+		
 		// Adds the soil feature the the overall list.
 		soilFeatures += currentSoilFeature;
 		// Console output for testing. Remove at will.
 		console.log("Soil feature: " + feature.attributes.OBJECTID);
 	  });
+	  
+	  // Writes the DRAINAGE1 values to the info box
+	  dom.byId("drainage").innerHTML = justDrains.join(", ");
+	  }
+	}
+	
+	// This function consumes a DRAINAGE1 values and returns their corresponding description
+	function drainageValues (value){
+		switch (value) {
+			case "I":
+				return "Imperfectly Drained";
+				break;
+			case "VR":
+				return "Very Rapidly Drained";
+				break;
+			case "R":
+				return "Rapidly Drained";
+				break;
+			case "W":
+				return "Well Drained";
+				break;
+			case "MW":
+				return "Moderately Well Drained";
+				break;
+			case "P":
+				return "Poorly Drained";
+				break;
+			case "VP":
+				return "Very Poorly Drained";
+				break;
+			case "VA":
+				return "Variable";
+				break;
+			default:
+				return "Not Applicable";
+		}
 	}
 	 
     /* This function outputs the area and length information which is calculated
