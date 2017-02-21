@@ -2,50 +2,94 @@
 <html>
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-
         <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no">
-        <title>Mapping and Information Tool for Tree Planting</title>
-        <link rel="stylesheet" href="http://www.w3schools.com/lib/w3.css">
-        <link rel="stylesheet" href="https://js.arcgis.com/3.19/esri/css/esri.css">
+        <title>Windbreak Application</title>
+        <link rel="stylesheet" href="https://js.arcgis.com/3.19/dijit/themes/tundra/tundra.css" />
+        <link rel="stylesheet" href="https://js.arcgis.com/3.19/esri/themes/calcite/dijit/calcite.css">
+        <link rel="stylesheet" href="https://js.arcgis.com/3.19/esri/themes/calcite/esri/esri.css">
+        <link rel="stylesheet" href="https://js.arcgis.com/3.19/esri/css/esri.css"/>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open Sans">
         <link rel="stylesheet" type="text/css" href="main.css">
-        <script src="d3.js"></script>
+        <script src="https://d3js.org/d3.v4.min.js"></script>
         <script src="https://js.arcgis.com/3.19/"></script>
         <script src="scripts.js"></script>
-
     </head>
-    <body>
-        <div id="header">
-            Draw a polygon around the area of interest. Select required parameters below
-            <br>
-            <div id="objective">Set Objective:
-                <label><input type="checkbox" name="objective" value="windbreak"> Windbreak</label>
-                <label><input type="checkbox" name="objective" value="visualbarrier"> Visual Barrier</label>
-                <label><input type="checkbox" name="objective" value="soundbarrier"> Sound Barrier</label>
-                <label><input type="checkbox" name="objective" value="pollinatorhabitat"> Pollinator Habitat</label>
-                <label><input type="checkbox" name="objective" value="erosioncontrol"> Soil Erosion</label>
-                <label><input type="checkbox" name="objective" value="shade"> Provide Shade</label>
+
+    <body class="claro">
+        <div id="mainWindow" data-dojo-type="dijit/layout/BorderContainer" 
+             data-dojo-props="design:'headline',gutters:false" 
+             style="width:100%; height:100%;">
+
+            <div data-dojo-type="dijit/layout/BorderContainer" data-dojo-props="gutters:false" 
+                 region="left" style="width: 20%;height:100%;">
+                <div id="leftPane" data-dojo-type="dijit/layout/ContentPane" 
+                     data-dojo-props="region:'center'">
+                    <div data-dojo-type="dijit/layout/TabContainer" style="width: 100%; height: 100%;" class="tundra">
+                        <div data-dojo-type="dijit/layout/ContentPane" title="Polygon Properties" data-dojo-props="selected:true">
+                            <div id="objective">
+                                <ul style="list-style-type:none; padding:5px 10px;">
+                                    <label>Set Objective:</label><br>
+                                    <li><label><input id="windbreak" type="checkbox" name="objective"> Windbreak</label></li>
+                                    <li><label><input id="visualbarrier" type="checkbox" name="objective"> Visual Barrier</label></li>
+                                    <li><label><input id="soundbarrier" type="checkbox" name="objective"> Sound Barrier</label></li>
+                                    <li><label><input id="pollinatorhabitat" type="checkbox" name="objective"> Pollinator Habitat</label></li>
+                                    <li><label><input id="erosioncontrol" type="checkbox" name="objective"> Soil Erosion</label></li>
+                                    <li><label><input id="shade" type="checkbox" name="objective"> Provide Shade</label></li>
+                                </ul>
+                                <div id="treeDropDown">
+                                    <select id="treeSelectionDrop">
+                                        <option>Select A Tree</option>
+                                    </select>
+                                </div>
+                                <div id="polygonbtn">
+                                    <button id="drawPolygon" data-dojo-type="dijit/form/Button">Draw a Polygon</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div data-dojo-type="dijit/layout/ContentPane" title="Polygon Info" data-dojo-props="selected:true">
+                            <div id="output">
+                                <div id="info">
+                                    Polygon Information: <br>
+                                    <span class="label">Area:</span> <b><span id="area"></span></b>
+                                    <br>
+                                    <span class="label">Length:</span> <b><span id="length"></span></b>
+                                    <br>
+                                    <span class ="label">Width:</span> <b><span id="pwidth"></span></b>
+                                    <br>
+                                    <span class="label">Species:</span> <b><span id="treespecies"></span></b>
+                                    <br>
+                                    <span class="label">Cost:</span> <b><span id="costperplant"></span></b>
+                                    <br>
+                                    <span class="label"># of rows:</span>  <b><span id="sTreeRow"></span></b>
+                                    <br>
+                                    <span class="label">Plants per row:</span> <b><span id="sTreeLength"></span></b>
+                                    <br>
+                                    <span class="label">Total plants:</span> <b><span id="sTreeTotal"></span></b>
+                                    <br>
+                                    <span class="label">Total cost:</span> <b><span id="sTreeCost"></span></b>
+                                    <br>
+                                    <span class ="label">Primary Drainage Types:<br></span><b><span id="drainage"></span></b>
+                                    <br>
+                                    <div id="printButton"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="header" data-dojo-type="dijit/layout/ContentPane" 
+                     data-dojo-props="region:'top'">
+                    <div id="featureCount" style="margin-bottom:0px;">Windbreak Application</div>
+                </div>
+            </div>
+            <div id="map" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'center'">
+                <div id="search"></div>
+                <div id="measurementBox" style="position:absolute; right:20px; top:10px; z-Index:999;">
+                    <div id="titlePane" data-dojo-type="dijit/TitlePane" data-dojo-props="title:'Measurement Tools', closable:false, open:false" class="calcite">
+                        <div id="measurementDiv"></div>
+                    </div>
+                </div>
             </div>
         </div>
-        <div id="search"></div>
-        <div id="mapDiv"></div>
-        <div id="info" class="esriSimpleSlider">
-            Polygon Information: <br>
-            <span class="label">Area: <span id="area"></span> sq ft </span>
-            <br>
-            <span class="label">Length: <span id="length"></span> feet </span>
-            <br>
-            <span class ="label">Width: <span id="pwidth"></span> feet </span>
-            <br>
-            ================================= <br><br>
-            <b>White Cedar - $0.85/plant</b><br>
-            <span class="label"># rows:</span> <span id="wcedarRow"></span>
-            <br>
-            <span class="label">Plants per row:</span> <span id="wcedarLength"></span>
-            <br>
-            <span class="label">Total plants:</span> <span id="wcedartotal"></span>
-            <br>
-            <span class="label">Total cost:</span> <span id="wcedarCost"></span>
-            <br>
-        </div>
     </body>
-</html>
+
+</html> 
