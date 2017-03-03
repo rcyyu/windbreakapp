@@ -5,10 +5,10 @@
         <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no">
         <title>Windbreak Application</title>
         <link rel="stylesheet" href="https://js.arcgis.com/3.19/dijit/themes/tundra/tundra.css" />
-        <link rel="stylesheet" href="https://js.arcgis.com/3.19/esri/themes/calcite/dijit/calcite.css">
-        <link rel="stylesheet" href="https://js.arcgis.com/3.19/esri/themes/calcite/esri/esri.css">
         <link rel="stylesheet" href="https://js.arcgis.com/3.19/esri/css/esri.css"/>
         <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open Sans">
+        <link rel="stylesheet" href="https://js.arcgis.com/3.19/esri/themes/calcite/dijit/calcite.css">
+        <link rel="stylesheet" href="https://js.arcgis.com/3.19/esri/themes/calcite/esri/esri.css">
         <link rel="stylesheet" type="text/css" href="main.css">
         <script src="https://d3js.org/d3.v4.min.js"></script>
         <script src="https://js.arcgis.com/3.19/"></script>
@@ -68,6 +68,7 @@
                                     <br>
                                     <span class="label">Total cost:</span> <b><span id="sTreeCost"></span></b>
                                     <br>
+                                    <span class ="label">Primary Soil Types Ranked by Area:</span><b><span id="soil"><ol id="soilList"></ol></span></b>
                                     <span class ="label">Primary Drainage Types:<br></span><b><span id="drainage"></span></b>
                                     <br>
                                     <div id="printButton"></div>
@@ -82,6 +83,7 @@
                 </div>
             </div>
             <div id="map" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'center'">
+                <img id="loadingImg" src="http://developers.arcgis.com/javascript/samples/map_showloading/images/loading.gif" style="position:absolute; right:49%; top:49%; z-index:100;" />
                 <div id="search"></div>
                 <div id="measurementBox" style="position:absolute; right:20px; top:10px; z-Index:999;">
                     <div id="titlePane" data-dojo-type="dijit/TitlePane" data-dojo-props="title:'Measurement Tools', closable:false, open:false" class="calcite">

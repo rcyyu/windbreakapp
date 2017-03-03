@@ -25,6 +25,7 @@ require([
     "esri/dijit/Search",
     "esri/dijit/Scalebar",
     "esri/graphic",
+    "esri/graphicsUtils",
     "esri/dijit/Print",
     "esri/layers/ArcGISTiledMapServiceLayer", 
     "esri/layers/ArcGISDynamicMapServiceLayer",
@@ -52,11 +53,10 @@ require([
     "dojo/domReady!"
 ], function(
         ready, on, connect, dom, keys, registry, domConstruct, parser, BorderContainer, ContentPane, TabContainer, has, Map, Measurement,
-         arcgisUtils, domUtils, Popup, json, esriConfig, lang, arrayUtil, Search, Scalebar, Graphic, Print,
+         arcgisUtils, domUtils, Popup, json, esriConfig, lang, arrayUtil, Search, Scalebar, Graphic, graphicsUtils, Print,
          ArcGISTiledMapServiceLayer, ArcGISDynamicMapServiceLayer, LayerDrawingOptions, ClassBreaksRenderer, Geometry, Extent,
          SpatialReference, GeometryService , AreasAndLengthsParameters , Query, Draw, SimpleFillSymbol,
-         FeatureLayer, geometryEngine, SimpleMarkerSymbol, SimpleRenderer,
-         SimpleLineSymbol, Color, FeatureSet
+         FeatureLayer, geometryEngine, SimpleMarkerSymbol, SimpleRenderer, SimpleLineSymbol, Color, FeatureSet
         ) {
     ready(function(){
         parser.parse();
@@ -120,13 +120,12 @@ require([
         }, dom.byId("measurementDiv"));
         measurement.startup();
 
-        // registers the draw polygon button as an even listener
-        registry.forEach(function(d) {
-            // d is a reference to a dijit
-            // could be a layout container or a button
-            if ( d.declaredClass === "dijit.form.Button" ) {
-                d.on("click", activateTool);
-            }
+        var drawBtn = dom.byId("drawPolygon");
+        var drawPolygon = new Draw(app.map, { showTooltips: true });
+
+        on(drawBtn, "click", function(evt) {
+            actionDisabler();
+            drawPolygon.activate(Draw.POLYGON);
         });
 
         /* This function is used to allow the user to draw their own polygon.
@@ -134,36 +133,40 @@ require([
          Instructions prompt the user how to draw polygon on the application.
          When the user is drawing the other features on screen except the map
          are disabled. They are enabled when the polygon is drawn. */
-        var tb;
-        function activateTool() {
-            var tb = new Draw(app.map);
-            tb.activate(Draw.POLYGON);
-            tb.on("draw-end", lang.hitch(app.map, getAreaAndLength));
-            actionDisabler();
-            tb.on("draw-end", function(){ tb.deactivate();
-                                         actionEnabler();});
-        }     
+        on(drawPolygon, "draw-end", function(evt){  
+            drawPolygon.deactivate();
+            actionEnabler();
+            var geom = evt.geometry;
+            if(geom.rings[0].length <= 3){
+                alert("Polygon must have at least three vertices.");
+                return;
+            }
+            getAreaAndLength(geom);
+        });
+
+        function outputSoilArea(evtObj) {
+            var result = evtObj.result;
+            dom.byId("area").innerHTML = result.areas[0].toFixed(3);
+        }
 
         // The REST service URL is used quite a bit, so it is replaced here by the variable 'soilURL'
         var soilURL = "https://ws.gisdynamic.lrc.gov.on.ca/public/rest/services/LIO_PUBLIC_DATA_SERVICES/geological_and_geophysical/MapServer/4"
 
         // Add the feature layers containing relevant data {e.g. soils, climate zones}, and specifies the specific desired fields
-        var featureLayer = new FeatureLayer(soilURL, {
+        var featureLayerSoil = new FeatureLayer(soilURL, {
             visible: true,
             mode: FeatureLayer.MODE_ONDEMAND,
             outFields: ["SHAPE", "OBJECTID", "SOIL_NAME1", "SOIL_NAME2", "SOIL_NAME3", "DRAINAGE1", "DRAINAGE2", "DRAINAGE3"]
         });
-        app.map.addLayer(featureLayer);
+        app.map.addLayer(featureLayerSoil);
 
         /* This function calls on the geometry service - "GeometryService" which will
          calculate the area and length of the polygon once the drawing is complete*/
         var geometryService = new GeometryService("https://sampleserver6.arcgisonline.com/arcgis/rest/services/Utilities/Geometry/GeometryServer");
         geometryService.on("areas-and-lengths-complete", outputAreaAndLength);
 
-        function getAreaAndLength(evtObj) {
-            console.log("test");
-            app.map = this,
-                geometry = evtObj.geometry;
+        function getAreaAndLength(geom) {
+            geometry = geom;
             app.map.graphics.clear();
 
             // selection symbol used to visualize underlying soil intersect area
@@ -171,7 +174,7 @@ require([
                                            new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID,
                                                                 new Color([255,0,0]), 2),new Color([255,255,0,0.25])
                                           );
-            featureLayer.setSelectionSymbol(sfs); 
+            featureLayerSoil.setSelectionSymbol(sfs); 
 
             // Intersects the user-drawn graphic with the soil feature layer and runs a data processing function after.
             //   Feel free to rename these variable as you see fit, these names are temporary and are for testing purposes.
@@ -189,12 +192,13 @@ require([
 
             // 'fs' is the variable representing the selection operation and 'fsComplete' runs
             //   the function 'useData' when the selection completes.
-            var fsComplete = featureLayer.on("selection-complete", useData);
-            var fs = featureLayer.selectFeatures(soilQuery, FeatureLayer.SELECTION_NEW);
+            var fsComplete = featureLayerSoil.on("selection-complete", useData);
+            var fs = featureLayerSoil.selectFeatures(soilQuery, FeatureLayer.SELECTION_NEW);
+            var fsTry = featureLayerSoil.getSelectedFeatures();
 
             //setup the parameters for the areas and lengths operation
             var areasAndLengthParams = new AreasAndLengthsParameters();
-            var squareFeetArea = new AreasAndLengthsParameters();
+
             areasAndLengthParams.lengthUnit = GeometryService.UNIT_FOOT; // length is calculated in feet
             areasAndLengthParams.areaUnit = GeometryService.UNIT_ACRES; // area is calculated in acres
             areasAndLengthParams.calculationType = "geodesic";
@@ -204,7 +208,6 @@ require([
             });
         }
 
-
         // 'useData' is a function that utilizes the data from the feature selection containing the layers
         //   intersecting with the user-drawn graphic
         function useData (event) {
@@ -213,34 +216,55 @@ require([
                 var soilFeatures = [];
                 // 'justDrains' stores the DRAINAGE1 variable of each feature in the user's selection
                 var justDrains = [];
+                // 'soilRankArea' stores a list of soil type ranked by their area which is stored with it.
+                var soilRankArea = [];
 
                 // This thing is a for loop that cycles through the selected features.
                 arrayUtil.forEach(event.features, function (feature) {
-                    // 'currentSoilFeature' is the array that holds the information for each individual feature.
-                    var currentSoilFeature = []
-                    // This code block adds relevant data to the soil feature.
-                    currentSoilFeature += feature.attributes.OBJECTID;
-                    currentSoilFeature += feature.attributes.SOIL_NAME1;
-                    currentSoilFeature += feature.attributes.DRAINAGE1;
+                    // creates the geometry of selected polygons intersecting with the selected area.
+                    var intersection = geometryEngine.intersect(feature.geometry, geometry)
+                    app.map.graphics.add(new Graphic(intersection, new SimpleFillSymbol()))
 
                     // Stores all the relevant DRAINAGE1 values, whilst preventing duplicates
                     if (!(justDrains.includes(drainageValues(feature.attributes.DRAINAGE1)))) {
                         justDrains.push(drainageValues(feature.attributes.DRAINAGE1));
                     }
-
-                    // Adds the soil feature the the overall list.
-                    soilFeatures += currentSoilFeature;
-                    // Console output for testing. Remove at will.
-                    console.log("Soil feature: " + feature.attributes.OBJECTID);
+                    // Adds area to a value of 'soilRankArea' if a soilValue already exists in the array
+                    var i;
+                    for (i=0; i<soilRankArea.length; i++) {
+                        if (soilRankArea[i][0] == soilValues(feature.attributes.SOIL_NAME1)) {
+                            soilRankArea[i][1] += geometryEngine.planarArea(intersection, "acres");
+                            break;
+                        }
+                    }
+                    // If a soil type does not exist in 'soilRankArea' then the value is added to the array in addition to its area.
+                    if (i >= soilRankArea.length) {
+                        soilRankArea[i] = [soilValues(feature.attributes.SOIL_NAME1), geometryEngine.planarArea(intersection, "acres")];
+                    }
+                    
+                    // sorts 'soilRankArea' by each soil types area in descending order.
+                    soilRankArea.sort(function(a, b) {
+                        if (a[1] > b[1]) {
+                            return -1;
+                        } else {
+                            return 1;
+                        }
+                    })
                 });
-
+                // 'soilRank' stores a list of soil type ranked by their area.
+                var soilRank = [];
+                // strips 'soilRankArea' of the area value and stores the soil value in 'soilRank'
+                for (var i=0; i<soilRankArea.length; i++) {
+                    soilRank[i] = "<li>" + soilRankArea[i][0] + "</li>";
+                }
                 // Writes the DRAINAGE1 values to the info box
                 dom.byId("drainage").innerHTML = justDrains.join('<br>');
+                dom.byId("soilList").innerHTML = soilRank.join('');
             }
         }
 
         // This function consumes a DRAINAGE1 values and returns their corresponding description
-        function drainageValues (value){
+        function drainageValues(value){
             switch (value) {
                 case "I":
                     return "Imperfectly Drained";
@@ -270,6 +294,12 @@ require([
                     return "Not Applicable";
             }
         }
+
+        // formats the soilValues so the letters are not all capitalized
+        function soilValues(value) {
+            return value.replace(/\w\S*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();})
+        }
+
 
         // Retreives the information off of species info csv
         var treeInfo;
@@ -421,5 +451,16 @@ require([
             fsComplete.remove();
             myUnload.remove();
         }
+        
+        // Shows a loading icon before the map is prepared.
+        var loading = dom.byId("loadingImg");    
+        function showLoading() {
+            esri.show(loading);
+        }
+
+        function hideLoading(error) {
+            esri.hide(loading);
+        }
+        hideLoading();
     });
 });
