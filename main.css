@@ -5,6 +5,45 @@ html, body {
     padding:0;
     font-family: "Open Sans";
 }
+
+.overlay {
+    /* Height & width depends on how you want to reveal the overlay (see JS below) */    
+    height: 100%;
+    width: 0;
+    position: fixed; /* Stay in place */
+    z-index: 1; /* Sit on top */
+    left: 0;
+    top: 0;
+    background-color: rgb(0,0,0); /* Black fallback color */
+    background-color: rgba(0,0,0, 0.9); /* Black w/opacity */
+    overflow-x: hidden; /* Disable horizontal scroll */
+    transition: 0.5s; /* 0.5 second transition effect to slide in or slide down the overlay (height or width, depending on reveal) */
+}
+
+.overlay-content {
+    position: relative;
+    top: 25%;
+    width: 100%;
+    text-align: center;
+    margin-top: 30px;
+}
+
+#disclaimer {
+    border:3px;
+    border-style:solid;
+    border-color:darkgray;
+    padding: 1em;
+    align-content: center;
+    margin: auto;
+    width:35%;
+    background-color: white;
+}
+
+.overlay .accept {
+    margin: auto
+    font-size: 60px;
+}
+
 #leftPane {
     width:20%;
     margin:0;
@@ -14,13 +53,20 @@ html, body {
     padding:0;
 }
 
-.esriScalebarLine {
+.esriScalebarLabel, 
+.esriScalebarLineLabel, 
+.esriScalebarSecondNumber, 
+.esriScaleLabelDiv  
+{  
+    text-shadow:  
+        -1px -1px 0 #fff,    
+        1px -1px 0 #fff,  
+        -1px 1px 0 #fff,  
+        1px 1px 0 #fff;  
+}  
 
-    border-color: White;
-}
-
-.esriScalebarLabel {
-    color:white;
+.calcite .esriScalebarLine {
+    border-color: white;
 }
 
 #search {
@@ -116,3 +162,5 @@ html, body {
 #titlePane {
     width:280px;
 }
+
+

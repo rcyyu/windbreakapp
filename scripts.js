@@ -15,6 +15,7 @@ require([
     "esri/sniff",
     "esri/map",
     "esri/dijit/Measurement",
+    "esri/dijit/Legend",
     "esri/arcgis/utils",
     "esri/domUtils",
     "esri/dijit/Popup",
@@ -31,6 +32,8 @@ require([
     "esri/layers/ArcGISDynamicMapServiceLayer",
     "esri/layers/LayerDrawingOptions",
     "esri/renderers/ClassBreaksRenderer",
+    "esri/geometry/normalizeUtils",
+    "esri/tasks/BufferParameters",
     "esri/geometry/Geometry",
     "esri/geometry/Extent" ,
     "esri/SpatialReference" ,
@@ -53,8 +56,8 @@ require([
     "dojo/domReady!"
 ], function(
         ready, on, connect, dom, keys, registry, domConstruct, parser, BorderContainer, ContentPane, TabContainer, has, Map, Measurement,
-         arcgisUtils, domUtils, Popup, json, esriConfig, lang, arrayUtil, Search, Scalebar, Graphic, graphicsUtils, Print,
-         ArcGISTiledMapServiceLayer, ArcGISDynamicMapServiceLayer, LayerDrawingOptions, ClassBreaksRenderer, Geometry, Extent,
+         Legend, arcgisUtils, domUtils, Popup, json, esriConfig, lang, arrayUtil, Search, Scalebar, Graphic, graphicsUtils, Print,
+         ArcGISTiledMapServiceLayer, ArcGISDynamicMapServiceLayer, LayerDrawingOptions, ClassBreaksRenderer, normalizeUtils, BufferParameters, Geometry, Extent,
          SpatialReference, GeometryService , AreasAndLengthsParameters , Query, Draw, SimpleFillSymbol,
          FeatureLayer, geometryEngine, SimpleMarkerSymbol, SimpleRenderer, SimpleLineSymbol, Color, FeatureSet
         ) {
@@ -65,10 +68,9 @@ require([
         //Create a map based on an ArcGIS Online web map id 
         app.map = new Map("map", {
             basemap: "hybrid", //Basemap type can be changed here.
-            center: [-80.39 , 43.40],
-            zoom: 14
+            center: [-84.11 , 47.37],
+            zoom: 6
         });
-
         // shows a scalebar on the map with metric and imperial units.
         var scalebar = new Scalebar({
             map: app.map,
@@ -77,14 +79,34 @@ require([
             // use "metric" for kilometers
             scalebarUnit: "dual",
             scalebarStyle: "ruler"
-        });
+        }, dojo.byId("scalebar"));
+
+        var maxExtent;
 
         app.printer = new Print({
             map: app.map,
             url: "http://intra.ws.gisdynamic.lrc.gov.on.ca/arcgis/services"
         }, dom.byId("printButton"));
         app.printer.startup();
+        /*
+        //set max extent to inital extent
+        dojo.connect(app.map, "onLoad", function(){
+            maxExtent = app.map.extent;
+        });
 
+        //check to see if map is within max extent when its extent changes.  If not, roll back to the max
+        //extent that we set above
+        dojo.connect(app.map, "onExtentChange", function(extent){
+            if((app.map.extent.xmin < maxExtent.xmin) ||
+               (app.map.extent.ymin < maxExtent.ymin)  ||
+               (app.map.extent.xmax > maxExtent.xmax) ||
+               (app.map.extent.ymax > maxExtent.ymax) 
+              ) {
+                app.map.setExtent(maxExtent);
+                console.log("max extent reached, rolling back to previous extent");
+            }
+        });
+*/
         //disables all user accessible actions on the screen
         function actionDisabler() {
             var nodes = document.getElementById("leftPane").getElementsByTagName('*');
@@ -120,10 +142,10 @@ require([
         }, dom.byId("measurementDiv"));
         measurement.startup();
 
-        var drawBtn = dom.byId("drawPolygon");
+        var drawPolygonBtn = dom.byId("drawPolygon");
         var drawPolygon = new Draw(app.map, { showTooltips: true });
 
-        on(drawBtn, "click", function(evt) {
+        on(drawPolygonBtn, "click", function(evt) {
             actionDisabler();
             drawPolygon.activate(Draw.POLYGON);
         });
@@ -143,6 +165,59 @@ require([
             }
             getAreaAndLength(geom);
         });
+
+        var gsvc = new GeometryService("https://utility.arcgisonline.com/ArcGIS/rest/services/Geometry/GeometryServer");
+        /* This function allows the user to draw a polyline which is used to
+         create a buffer around the affected area of a windbreak. */
+        var drawPolylineBtn = dom.byId("drawPolyline");
+        var drawPolyline = new Draw(app.map, { showTooltips: true });
+
+        on(drawPolylineBtn, "click", function(evt) {
+            actionDisabler();
+            drawPolyline.activate(Draw.POLYLINE);
+        });
+
+        on(drawPolyline, "draw-end", function(evt){  
+            drawPolyline.deactivate();
+            actionEnabler();
+            var geom = evt.geometry;
+            doBuffer(geom);
+        });
+
+        function doBuffer(geom) {
+            var symbol = new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID, new Color([255,0,0]), 1);
+            var geometry = geom, symbol;
+
+            var graphic = new Graphic(geometry, symbol);
+            app.map.graphics.add(graphic);
+
+            //setup the buffer parameters
+            var params = new BufferParameters();
+            params.distances = 15;
+            params.outSpatialReference = app.map.spatialReference;
+            params.unit = GeometryService.UNIT_KILOMETER;
+            console.log(params);
+            //normalize the geometry 
+            params.geometries = [geometry];
+            gsvc.buffer(params, showBuffer);
+        }
+
+        function showBuffer(bufferedGeometries) {
+            var symbol = new SimpleFillSymbol(
+                SimpleFillSymbol.STYLE_SOLID,
+                new SimpleLineSymbol(
+                    SimpleLineSymbol.STYLE_SOLID,
+                    new Color([255,0,0,0.65]), 2
+                ),
+                new Color([255,0,0,0.35])
+            );
+
+            array.forEach(bufferedGeometries, function(geometry) {
+                var graphic = new Graphic(geometry, symbol);
+                app.map.graphics.add(graphic);
+            });
+
+        }
 
         function outputSoilArea(evtObj) {
             var result = evtObj.result;
@@ -241,7 +316,7 @@ require([
                     if (i >= soilRankArea.length) {
                         soilRankArea[i] = [soilValues(feature.attributes.SOIL_NAME1), geometryEngine.planarArea(intersection, "acres")];
                     }
-                    
+
                     // sorts 'soilRankArea' by each soil types area in descending order.
                     soilRankArea.sort(function(a, b) {
                         if (a[1] > b[1]) {
@@ -451,7 +526,7 @@ require([
             fsComplete.remove();
             myUnload.remove();
         }
-        
+
         // Shows a loading icon before the map is prepared.
         var loading = dom.byId("loadingImg");    
         function showLoading() {
