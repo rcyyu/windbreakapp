@@ -193,9 +193,9 @@ require([
 
             //setup the buffer parameters
             var params = new BufferParameters();
-            params.distances = 15;
+            params.distances = [15]; //Will be some variable depending on the spreadsheet
             params.outSpatialReference = app.map.spatialReference;
-            params.unit = GeometryService.UNIT_KILOMETER;
+            params.unit = GeometryService.UNIT_FOOT;
             console.log(params);
             //normalize the geometry 
             params.geometries = [geometry];
@@ -212,7 +212,7 @@ require([
                 new Color([255,0,0,0.35])
             );
 
-            array.forEach(bufferedGeometries, function(geometry) {
+            arrayUtil.forEach(bufferedGeometries, function(geometry) {
                 var graphic = new Graphic(geometry, symbol);
                 app.map.graphics.add(graphic);
             });
@@ -498,8 +498,9 @@ require([
             dom.byId("length").innerHTML = polyLength + " feet";
             polyWidth = (result.areas[0].toFixed(3) * 43560) / (result.lengths[0].toFixed(3)); // converts acres to square feet then calculates width in feet
             dom.byId("pwidth").innerHTML = polyWidth.toFixed(3) + " feet";
-            outputCalculatedValues();
+            //outputCalculatedValues();
         }
+		/*
         // outputs the values calculated using the dimensions and plant information given from selectedTree
         function outputCalculatedValues() {
             var treeSpecies = selectedTree.species;
@@ -515,6 +516,7 @@ require([
             var selectedTreeCost = selectedTreeTotal * selectedTree.cost;
             dom.byId("sTreeCost").innerHTML = "$" + selectedTreeCost.toFixed(2);
         }
+		*/
         // assigns the event handler for all of the checkboxes so that checkboxHandlers
         // is activated on-click.
         attachCheckboxHandlers();
