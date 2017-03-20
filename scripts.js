@@ -49,6 +49,9 @@ require([
     "esri/symbols/SimpleLineSymbol",
     "esri/Color",
     "esri/tasks/FeatureSet",
+	"esri/tasks/LengthsParameters",
+	"esri/tasks/DistanceParameters",
+	"esri/geometry/Point",
     "dijit/form/Button",
     "dijit/WidgetSet",
     "dijit/TitlePane",
@@ -59,7 +62,7 @@ require([
          Legend, arcgisUtils, domUtils, Popup, json, esriConfig, lang, arrayUtil, Search, Scalebar, Graphic, graphicsUtils, Print,
          ArcGISTiledMapServiceLayer, ArcGISDynamicMapServiceLayer, LayerDrawingOptions, ClassBreaksRenderer, normalizeUtils, BufferParameters, Geometry, Extent,
          SpatialReference, GeometryService , AreasAndLengthsParameters , Query, Draw, SimpleFillSymbol,
-         FeatureLayer, geometryEngine, SimpleMarkerSymbol, SimpleRenderer, SimpleLineSymbol, Color, FeatureSet
+         FeatureLayer, geometryEngine, SimpleMarkerSymbol, SimpleRenderer, SimpleLineSymbol, Color, FeatureSet, LengthsParameters, DistanceParameters, Point
         ) {
     ready(function(){
         parser.parse();
@@ -176,12 +179,14 @@ require([
             actionDisabler();
             drawPolyline.activate(Draw.POLYLINE);
         });
-
+		
+		// When the user finishes drawing a line, these things happen.
         on(drawPolyline, "draw-end", function(evt){  
             drawPolyline.deactivate();
             actionEnabler();
             var geom = evt.geometry;
             doBuffer(geom);
+			calculateDistances(geom.paths[0])
         });
 
         function doBuffer(geom) {
@@ -196,12 +201,12 @@ require([
             params.distances = [15]; //Will be some variable depending on the spreadsheet
             params.outSpatialReference = app.map.spatialReference;
             params.unit = GeometryService.UNIT_FOOT;
-            console.log(params);
             //normalize the geometry 
             params.geometries = [geometry];
             gsvc.buffer(params, showBuffer);
         }
-
+		
+		// Establishes the parameters for displaying the buffer.
         function showBuffer(bufferedGeometries) {
             var symbol = new SimpleFillSymbol(
                 SimpleFillSymbol.STYLE_SOLID,
@@ -218,6 +223,26 @@ require([
             });
 
         }
+		
+		// This function calculates the length of each line segment that the user creates in the polyline.
+		function calculateDistances(coords) {
+			distancesSegment = []; // This is the array that will contain the calculated lengths.
+			
+			// This loops through each successive pair of coordinates to calculate the lengths between them.
+			for (n = 0; n < coords.length - 1; n++) {
+				var herePoint = new Point(coords[n], app.map.spatialReference);
+				var therePoint = new Point(coords[n + 1], app.map.spatialReference);
+				var distParams = new DistanceParameters();
+				distParams.distanceUnit = GeometryService.UNIT_FOOT;
+				distParams.geodesic = true;
+				distParams.geometry1 = herePoint;
+				distParams.geometry2 = therePoint;
+				gsvc.distance(distParams, function(distance) {
+					distancesSegment.push(distance);
+				});
+			}
+			console.log(distancesSegment);
+		}
 
         function outputSoilArea(evtObj) {
             var result = evtObj.result;
