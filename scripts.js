@@ -6,6 +6,7 @@ require([
     "dojo/_base/connect",
     "dojo/dom",
     "dojo/keys",
+    "dojo/number",
     "dijit/registry",
     "dojo/dom-construct",
     "dojo/parser", 
@@ -47,22 +48,24 @@ require([
     "esri/symbols/SimpleMarkerSymbol",
     "esri/renderers/SimpleRenderer",
     "esri/symbols/SimpleLineSymbol",
+    "esri/symbols/TextSymbol",
+    "esri/symbols/Font",
     "esri/Color",
     "esri/tasks/FeatureSet",
-	"esri/tasks/LengthsParameters",
-	"esri/tasks/DistanceParameters",
-	"esri/geometry/Point",
+    "esri/tasks/LengthsParameters",
+    "esri/tasks/DistanceParameters",
+    "esri/geometry/Point",
     "dijit/form/Button",
     "dijit/WidgetSet",
     "dijit/TitlePane",
     "dijit/form/CheckBox",
     "dojo/domReady!"
 ], function(
-        ready, on, connect, dom, keys, registry, domConstruct, parser, BorderContainer, ContentPane, TabContainer, has, Map, Measurement,
+        ready, on, connect, dom, keys, number, registry, domConstruct, parser, BorderContainer, ContentPane, TabContainer, has, Map, Measurement,
          Legend, arcgisUtils, domUtils, Popup, json, esriConfig, lang, arrayUtil, Search, Scalebar, Graphic, graphicsUtils, Print,
          ArcGISTiledMapServiceLayer, ArcGISDynamicMapServiceLayer, LayerDrawingOptions, ClassBreaksRenderer, normalizeUtils, BufferParameters, Geometry, Extent,
-         SpatialReference, GeometryService , AreasAndLengthsParameters , Query, Draw, SimpleFillSymbol,
-         FeatureLayer, geometryEngine, SimpleMarkerSymbol, SimpleRenderer, SimpleLineSymbol, Color, FeatureSet, LengthsParameters, DistanceParameters, Point
+         SpatialReference, GeometryService , AreasAndLengthsParameters , Query, Draw, SimpleFillSymbol, FeatureLayer, geometryEngine, SimpleMarkerSymbol,
+         SimpleRenderer, SimpleLineSymbol, TextSymbol, Font, Color, FeatureSet, LengthsParameters, DistanceParameters, Point
         ) {
     ready(function(){
         parser.parse();
@@ -179,14 +182,15 @@ require([
             actionDisabler();
             drawPolyline.activate(Draw.POLYLINE);
         });
-		
-		// When the user finishes drawing a line, these things happen.
+
+
+        // When the user finishes drawing a line, these things happen.
         on(drawPolyline, "draw-end", function(evt){  
             drawPolyline.deactivate();
             actionEnabler();
             var geom = evt.geometry;
             doBuffer(geom);
-			calculateDistances(geom.paths[0])
+            calculateDistances(geom.paths[0])
         });
 
         function doBuffer(geom) {
@@ -205,8 +209,8 @@ require([
             params.geometries = [geometry];
             gsvc.buffer(params, showBuffer);
         }
-		
-		// Establishes the parameters for displaying the buffer.
+
+        // Establishes the parameters for displaying the buffer.
         function showBuffer(bufferedGeometries) {
             var symbol = new SimpleFillSymbol(
                 SimpleFillSymbol.STYLE_SOLID,
@@ -223,26 +227,38 @@ require([
             });
 
         }
-		
-		// This function calculates the length of each line segment that the user creates in the polyline.
-		function calculateDistances(coords) {
-			distancesSegment = []; // This is the array that will contain the calculated lengths.
-			
-			// This loops through each successive pair of coordinates to calculate the lengths between them.
-			for (n = 0; n < coords.length - 1; n++) {
-				var herePoint = new Point(coords[n], app.map.spatialReference);
-				var therePoint = new Point(coords[n + 1], app.map.spatialReference);
-				var distParams = new DistanceParameters();
-				distParams.distanceUnit = GeometryService.UNIT_FOOT;
-				distParams.geodesic = true;
-				distParams.geometry1 = herePoint;
-				distParams.geometry2 = therePoint;
-				gsvc.distance(distParams, function(distance) {
-					distancesSegment.push(distance);
-				});
-			}
-			console.log(distancesSegment);
-		}
+
+        // This function calculates the length of each line segment that the user creates in the polyline.
+        function calculateDistances(coords) {
+            var distancesSegment = []; // This is the array that will contain the calculated lengths.
+            var font = new Font("20px", Font.STYLE_NORMAL, Font.VARIANT_NORMAL, Font.WEIGHT_BOLDER);
+            // This loops through each successive pair of coordinates to calculate the lengths between them.
+            for (n = 0; n < coords.length - 1; n++) {
+                var herePoint = new Point(coords[n], app.map.spatialReference);
+                var therePoint = new Point(coords[n + 1], app.map.spatialReference);
+                var middleCoord = new Point([(coords[n][0] + coords[n + 1][0]) / 2, (coords[n][1] + coords[n + 1][1]) / 2], app.map.spatialReference);
+                console.log(middleCoord);
+                var distParams = new DistanceParameters();
+                distParams.distanceUnit = GeometryService.UNIT_FOOT;
+                distParams.geodesic = true;
+                distParams.geometry1 = herePoint;
+                distParams.geometry2 = therePoint;
+                gsvc.distance(distParams, function(distance) {
+                    distancesSegment.push(distance);
+                    var distanceLabel = new TextSymbol();
+                    distanceLabel.text = number.format(distance) + "Feet";
+                    distanceLabel.font = font;
+                    distanceLabel.color = new Color([0, 0, 0]);
+                    var distanceLabelGraphic = new Graphic();
+                    distanceLabelGraphic.geometry = middleCoord;
+                    distanceLabelGraphic.symbol = distanceLabel;
+                    app.map.graphics.add(distanceLabelGraphic);
+                });
+
+
+            }
+            console.log(distancesSegment);
+        }
 
         function outputSoilArea(evtObj) {
             var result = evtObj.result;
@@ -525,7 +541,7 @@ require([
             dom.byId("pwidth").innerHTML = polyWidth.toFixed(3) + " feet";
             //outputCalculatedValues();
         }
-		/*
+        /*
         // outputs the values calculated using the dimensions and plant information given from selectedTree
         function outputCalculatedValues() {
             var treeSpecies = selectedTree.species;
