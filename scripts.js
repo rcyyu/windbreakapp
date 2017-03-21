@@ -177,20 +177,25 @@ require([
          create a buffer around the affected area of a windbreak. */
         var drawPolylineBtn = dom.byId("drawPolyline");
         var drawPolyline = new Draw(app.map, { showTooltips: true });
-
+        var inputPoints = [];
+        // handle will contain the event listener for click
+        var handle;
+        
         on(drawPolylineBtn, "click", function(evt) {
             actionDisabler();
+            inputPoints = [];
             drawPolyline.activate(Draw.POLYLINE);
+            handle = dojo.connect(app.map, "onClick", calculateDistances);
         });
 
 
         // When the user finishes drawing a line, these things happen.
         on(drawPolyline, "draw-end", function(evt){  
             drawPolyline.deactivate();
+            dojo.disconnect(handle);
             actionEnabler();
             var geom = evt.geometry;
             doBuffer(geom);
-            calculateDistances(geom.paths[0])
         });
 
         function doBuffer(geom) {
@@ -227,37 +232,43 @@ require([
             });
 
         }
-
+        
         // This function calculates the length of each line segment that the user creates in the polyline.
-        function calculateDistances(coords) {
+        function calculateDistances(evt) {
+            //adds point clicked by the user to the list of clicked points
+            var inPoint = new Point([evt.mapPoint.x, evt.mapPoint.y], app.map.spatialReference);
+            inputPoints.push(inPoint);
             var distancesSegment = []; // This is the array that will contain the calculated lengths.
             var font = new Font("20px", Font.STYLE_NORMAL, Font.VARIANT_NORMAL, Font.WEIGHT_BOLDER);
-            // This loops through each successive pair of coordinates to calculate the lengths between them.
-            for (n = 0; n < coords.length - 1; n++) {
-                var herePoint = new Point(coords[n], app.map.spatialReference);
-                var therePoint = new Point(coords[n + 1], app.map.spatialReference);
-                var middleCoord = new Point([(coords[n][0] + coords[n + 1][0]) / 2, (coords[n][1] + coords[n + 1][1]) / 2], app.map.spatialReference);
-                console.log(middleCoord);
+            // Distances are outputted when two or more points a created
+            if (inputPoints.length >= 2) {
+                // The point that lies in the middle of two points is calculated and created
+                var middleX = (inputPoints[inputPoints.length - 2].x + inputPoints[inputPoints.length - 1].x) / 2;
+                var middleY = (inputPoints[inputPoints.length - 2].y + inputPoints[inputPoints.length - 1].y) / 2;
+                var middleCoord = new Point([middleX, middleY], app.map.spatialReference);
                 var distParams = new DistanceParameters();
+                // setting up DistanceParameters
                 distParams.distanceUnit = GeometryService.UNIT_FOOT;
                 distParams.geodesic = true;
-                distParams.geometry1 = herePoint;
-                distParams.geometry2 = therePoint;
+                distParams.geometry1 = inputPoints[inputPoints.length - 2];
+                distParams.geometry2 = inputPoints[inputPoints.length - 1];
+                // calculating the distance of the points specified in distParams
                 gsvc.distance(distParams, function(distance) {
-                    distancesSegment.push(distance);
+                    // The distance is displayed onto the map as a label
+                    distancesSegment.push(Number(distance));
                     var distanceLabel = new TextSymbol();
-                    distanceLabel.text = number.format(distance) + "Feet";
+                    distanceLabel.text = number.format(distance) + " Feet";
                     distanceLabel.font = font;
                     distanceLabel.color = new Color([0, 0, 0]);
                     var distanceLabelGraphic = new Graphic();
-                    distanceLabelGraphic.geometry = middleCoord;
+                    // Label is placed at the center of the line
+                    distanceLabelGraphic.geometry = middleCoord
                     distanceLabelGraphic.symbol = distanceLabel;
                     app.map.graphics.add(distanceLabelGraphic);
                 });
 
 
             }
-            console.log(distancesSegment);
         }
 
         function outputSoilArea(evtObj) {
