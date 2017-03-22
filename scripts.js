@@ -120,6 +120,7 @@ require([
                 nodes[i].disabled = true;
             }
             registry.byId('drawPolygon').set('disabled', true);
+            registry.byId('drawPolyline').set('disabled', true);
             document.getElementById("measurementBox").style.display = "none";
             document.getElementById("search").style.display = "none";
         }
@@ -127,6 +128,8 @@ require([
         //enables all user accessible actions on the screen
         function actionEnabler() {
             registry.byId('drawPolygon').set('disabled', false);
+            
+            registry.byId('drawPolyline').set('disabled', false);
             var nodes = document.getElementById("leftPane").getElementsByTagName('*');
             for (var i=0; i<nodes.length; i++)  {
                 nodes[i].disabled = false;
@@ -582,9 +585,9 @@ require([
             dom.byId("length").innerHTML = polyLength + " feet";
             polyWidth = (result.areas[0].toFixed(3) * 43560) / (result.lengths[0].toFixed(3)); // converts acres to square feet then calculates width in feet
             dom.byId("pwidth").innerHTML = polyWidth.toFixed(3) + " feet";
-            //outputCalculatedValues();
+            outputCalculatedValues();
         }
-        /*
+        
         // outputs the values calculated using the dimensions and plant information given from selectedTree
         function outputCalculatedValues() {
             var treeSpecies = selectedTree.species;
@@ -600,7 +603,7 @@ require([
             var selectedTreeCost = selectedTreeTotal * selectedTree.cost;
             dom.byId("sTreeCost").innerHTML = "$" + selectedTreeCost.toFixed(2);
         }
-		*/
+		
         // assigns the event handler for all of the checkboxes so that checkboxHandlers
         // is activated on-click.
         attachCheckboxHandlers();
