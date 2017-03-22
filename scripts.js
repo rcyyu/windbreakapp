@@ -147,13 +147,18 @@ require([
             map: app.map
         }, dom.byId("measurementDiv"));
         measurement.startup();
-
+        // input points is used to store the points at which the user clicks when calculateDistances is activated
+        var inputPoints = [];
         var drawPolygonBtn = dom.byId("drawPolygon");
         var drawPolygon = new Draw(app.map, { showTooltips: true });
+        var polylineHandle;
 
         on(drawPolygonBtn, "click", function(evt) {
+            app.map.graphics.clear();
             actionDisabler();
+            inputPoints = [];
             drawPolygon.activate(Draw.POLYGON);
+            polygonHandle = dojo.connect(app.map, "onClick", calculateDistances);
         });
 
         /* This function is used to allow the user to draw their own polygon.
@@ -169,6 +174,36 @@ require([
                 alert("Polygon must have at least three vertices.");
                 return;
             }
+            dojo.disconnect(polygonHandle);
+            //adds point clicked by the user to the list of clicked points
+            var font = new Font("20px", Font.STYLE_NORMAL, Font.VARIANT_NORMAL, Font.WEIGHT_BOLDER);
+            // Distances are outputted when two or more points a created
+            if (inputPoints.length >= 2) {
+                // The point that lies in the middle of two points is calculated and created
+                var middleX = (inputPoints[0].x + inputPoints[inputPoints.length - 1].x) / 2;
+                var middleY = (inputPoints[0].y + inputPoints[inputPoints.length - 1].y) / 2;
+                var middleCoord = new Point([middleX, middleY], app.map.spatialReference);
+                var distParams = new DistanceParameters();
+                // setting up DistanceParameters
+                distParams.distanceUnit = GeometryService.UNIT_FOOT;
+                distParams.geodesic = true;
+                distParams.geometry1 = inputPoints[0];
+                distParams.geometry2 = inputPoints[inputPoints.length - 1];
+                // calculating the distance of the points specified in distParams
+                gsvc.distance(distParams, function(distance) {
+                    // The distance is displayed onto the map as a label
+                    var distanceLabel = new TextSymbol();
+                    distanceLabel.text = number.format(distance) + " Feet";
+                    distanceLabel.font = font;
+                    distanceLabel.color = new Color([0, 0, 0]);
+                    var distanceLabelGraphic = new Graphic();
+                    // Label is placed at the center of the line
+                    distanceLabelGraphic.geometry = middleCoord
+                    distanceLabelGraphic.symbol = distanceLabel;
+                    app.map.graphics.add(distanceLabelGraphic);
+                });
+            }
+            
             getAreaAndLength(geom);
         });
 
@@ -177,22 +212,23 @@ require([
          create a buffer around the affected area of a windbreak. */
         var drawPolylineBtn = dom.byId("drawPolyline");
         var drawPolyline = new Draw(app.map, { showTooltips: true });
-        var inputPoints = [];
-        // handle will contain the event listener for click
-        var handle;
-        
+
+        // polylineHandle will contain the event listener for click
+        var polylineHandle;
+
         on(drawPolylineBtn, "click", function(evt) {
+            app.map.graphics.clear();
             actionDisabler();
             inputPoints = [];
             drawPolyline.activate(Draw.POLYLINE);
-            handle = dojo.connect(app.map, "onClick", calculateDistances);
+            polylineHandle = dojo.connect(app.map, "onClick", calculateDistances);
         });
 
 
         // When the user finishes drawing a line, these things happen.
         on(drawPolyline, "draw-end", function(evt){  
             drawPolyline.deactivate();
-            dojo.disconnect(handle);
+            dojo.disconnect(polylineHandle);
             actionEnabler();
             var geom = evt.geometry;
             doBuffer(geom);
@@ -232,13 +268,12 @@ require([
             });
 
         }
-        
+
         // This function calculates the length of each line segment that the user creates in the polyline.
         function calculateDistances(evt) {
             //adds point clicked by the user to the list of clicked points
             var inPoint = new Point([evt.mapPoint.x, evt.mapPoint.y], app.map.spatialReference);
             inputPoints.push(inPoint);
-            var distancesSegment = []; // This is the array that will contain the calculated lengths.
             var font = new Font("20px", Font.STYLE_NORMAL, Font.VARIANT_NORMAL, Font.WEIGHT_BOLDER);
             // Distances are outputted when two or more points a created
             if (inputPoints.length >= 2) {
@@ -255,7 +290,6 @@ require([
                 // calculating the distance of the points specified in distParams
                 gsvc.distance(distParams, function(distance) {
                     // The distance is displayed onto the map as a label
-                    distancesSegment.push(Number(distance));
                     var distanceLabel = new TextSymbol();
                     distanceLabel.text = number.format(distance) + " Feet";
                     distanceLabel.font = font;
@@ -266,10 +300,9 @@ require([
                     distanceLabelGraphic.symbol = distanceLabel;
                     app.map.graphics.add(distanceLabelGraphic);
                 });
-
-
             }
         }
+        
 
         function outputSoilArea(evtObj) {
             var result = evtObj.result;
@@ -294,7 +327,6 @@ require([
 
         function getAreaAndLength(geom) {
             geometry = geom;
-            app.map.graphics.clear();
 
             // selection symbol used to visualize underlying soil intersect area
             var sfs = new SimpleFillSymbol(SimpleFillSymbol.STYLE_SOLID,
