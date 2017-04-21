@@ -1,0 +1,99 @@
+html {
+    height: 100%;
+}
+body {
+    height: inherit;
+}
+
+h1 {
+    font-family: "Arial";
+    color: #4CAF50;
+    position: absolute;
+    top: 10%;
+    left: 50%;
+    transform: translate(-50%);
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.content {
+    position: absolute;
+    top: 15%;
+    width: 50%;
+    height: 75%;
+    left: 50%;
+    transform: translate(-50%);
+    outline: #000 solid thin;
+}
+
+.detail {
+    position: absolute;
+    top: 25%;
+    left: 50%;
+    transform: translate(-50%);
+    float: left;
+    margin: 2em;
+    padding-top: 150px;
+    font-size: 1.3em;
+    -webkit-column-count: 2; /* Chrome, Safari, Opera */
+    -moz-column-count: 2; /* Firefox */
+    column-count: 2;
+    -webkit-column-rule: 4px outset #4CAF50; /* Chrome, Safari, Opera */
+    -moz-column-rule: 4px outset #4CAF50; /* Firefox */
+    column-rule: 4px outset #4CAF50;
+    -webkit-column-gap: 40px; /* Chrome, Safari, Opera */
+    -moz-column-gap: 40px; /* Firefox */
+    column-gap: 40px;
+    -webkit-column-span: all; /* Chrome, Safari, Opera */
+    column-span: all;
+    margin-left: auto;
+    margin-right: auto;
+}
+.select {
+    position: absolute;
+    top: 60%;
+    left: 50%;
+    transform: translate(-50%, 50%);
+    float: left;
+    margin: 2em;
+    padding-top: 0px;
+    font-size: 1.3em;
+    -webkit-column-count: 2; /* Chrome, Safari, Opera */
+    -moz-column-count: 2; /* Firefox */
+    column-count: 2;
+    -webkit-column-gap: 40px; /* Chrome, Safari, Opera */
+    -moz-column-gap: 40px; /* Firefox */
+    column-gap: 40px;
+    -webkit-column-span: all; /* Chrome, Safari, Opera */
+    column-span: all;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#english {
+    border: none;
+    height: 50px;
+    width: 150px;
+    background-color: #4CAF50; /* Green */
+    color: white;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    border-radius: 4px;
+    cursor:pointer;
+}
+
+#french {
+    border: none;
+    height: 50px;
+    width: 150px;
+    background-color: #4CAF50; /* Green */
+    color: white;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    border-radius: 4px;
+    cursor:pointer;
+}
