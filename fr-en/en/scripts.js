@@ -73,7 +73,7 @@ require([
     ready(function(){
         parser.parse();
         esriConfig.defaults.io.proxyUrl = "/proxy/";
-        app.printUrl = "http://intra.ws.gisdynamic.lrc.gov.on.ca/arcgis/services"
+        app.printUrl = "" //removed key
         //Create a map based on an ArcGIS Online web map id 
         app.map = new Map("map", {
             basemap: "hybrid", //Basemap type can be changed here.
@@ -132,7 +132,7 @@ require([
 
         app.printer = new Print({
             map: app.map,
-            url: "http://intra.ws.gisdynamic.lrc.gov.on.ca/arcgis/services"
+            url: "" //removed key
         }, dom.byId("printButton"));
         app.printer.startup();
 
@@ -354,7 +354,7 @@ require([
         }
 
         // The REST service URL is used quite a bit, so it is replaced here by the variable 'soilURL'
-        var soilURL = "https://ws.gisdynamic.lrc.gov.on.ca/public/rest/services/LIO_PUBLIC_DATA_SERVICES/geological_and_geophysical/MapServer/4"
+        var soilURL = "" //removed key
 
         // Add the feature layers containing relevant data {e.g. soils, climate zones}, and specifies the specific desired fields
         var featureLayerSoil = new FeatureLayer(soilURL, {
